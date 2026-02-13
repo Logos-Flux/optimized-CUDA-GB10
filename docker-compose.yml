@@ -1,0 +1,24 @@
+services:
+  cuda-dev:
+    build: .
+    container_name: optimized-cuda-gb10
+    runtime: nvidia
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+      - TORCH_CUDA_ARCH_LIST=12.1a
+    volumes:
+      - .:/workspace
+      - cuda-cache:/root/.cache
+    network_mode: host
+    stdin_open: true
+    tty: true
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+
+volumes:
+  cuda-cache:

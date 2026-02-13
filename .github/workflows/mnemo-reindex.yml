@@ -1,0 +1,56 @@
+name: Sync to Mnemo AI Search
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  reindex:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Extract changed files
+        id: changes
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const added = new Set();
+            const modified = new Set();
+            const removed = new Set();
+
+            for (const commit of context.payload.commits || []) {
+              for (const f of commit.added || []) { removed.delete(f); modified.delete(f); added.add(f); }
+              for (const f of commit.modified || []) { if (!added.has(f)) modified.add(f); removed.delete(f); }
+              for (const f of commit.removed || []) { if (added.has(f)) { added.delete(f); } else { modified.delete(f); removed.add(f); } }
+            }
+
+            const changes = { added: [...added], modified: [...modified], removed: [...removed] };
+            core.setOutput('json', JSON.stringify(changes));
+            const total = changes.added.length + changes.modified.length + changes.removed.length;
+            core.info(`Changes: +${changes.added.length} ~${changes.modified.length} -${changes.removed.length} (${total} total)`);
+
+      - name: Trigger R2 sync
+        env:
+          CHANGES_JSON: ${{ steps.changes.outputs.json }}
+        run: |
+          payload=$(jq -n \
+            --arg repo "${{ github.repository }}" \
+            --arg ref "${{ github.ref }}" \
+            --arg passphrase "${{ secrets.MNEMO_PASSPHRASE }}" \
+            --argjson changes "$CHANGES_JSON" \
+            '{repo: $repo, ref: $ref, passphrase: $passphrase, changes: $changes}')
+
+          response=$(curl -s -w "\n%{http_code}" -X POST \
+            https://mnemo.solamp.workers.dev/api/reindex \
+            -H 'Content-Type: application/json' \
+            -d "$payload")
+
+          http_code=$(echo "$response" | tail -1)
+          body=$(echo "$response" | sed '$d')
+
+          echo "Status: $http_code"
+          echo "Response: $body"
+
+          if [ "$http_code" -ge 400 ]; then
+            echo "::error::Reindex failed with status $http_code"
+            exit 1
+          fi

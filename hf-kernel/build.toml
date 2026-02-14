@@ -1,0 +1,16 @@
+[general]
+name = "gb10_rmsnorm"
+version = 1
+backends = ["cuda"]
+
+[torch]
+src = [
+    "torch-ext/torch_binding.cpp",
+    "torch-ext/torch_binding.h",
+]
+
+[kernel.rmsnorm]
+backend = "cuda"
+depends = ["torch"]
+src = ["kernel_src/rmsnorm.cu"]
+cuda-capabilities = ["12.1"]

@@ -23,7 +23,8 @@ RUN pip install --no-cache-dir \
     ninja \
     triton \
     pybind11 \
-    numpy
+    numpy \
+    pytest
 
 # Set CUDA arch for GB10 (Blackwell sm_121)
 ENV TORCH_CUDA_ARCH_LIST="12.1a"
@@ -32,5 +33,8 @@ WORKDIR /workspace
 
 # Copy project files
 COPY . /workspace
+
+# Build and install kernels
+RUN pip install -e .
 
 CMD ["bash"]

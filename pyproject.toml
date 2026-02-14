@@ -1,0 +1,10 @@
+[build-system]
+requires = ["setuptools", "wheel", "torch"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "gb10_kernels"
+version = "0.1.0"
+description = "Optimized CUDA kernels for NVIDIA GB10 Blackwell"
+requires-python = ">=3.10"
+dependencies = ["torch"]

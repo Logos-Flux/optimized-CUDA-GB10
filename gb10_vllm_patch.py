@@ -10,6 +10,7 @@ and rename or symlink as sitecustomize.py.
 Set GB10_DISABLE_PATCH=1 to skip patching (useful for A/B benchmarking
 the same image against stock vLLM).
 """
+
 import logging
 import os
 

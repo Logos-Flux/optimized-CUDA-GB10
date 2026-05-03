@@ -6,14 +6,13 @@ Usage:
     python benchmarks/benchmark_gelu.py
 """
 
-import torch
 import time
-from typing import Tuple
 
+import torch
 from gb10_kernels import gelu
 
 
-def benchmark_fn(func, args, warmup: int = 20, iterations: int = 100) -> Tuple[float, float]:
+def benchmark_fn(func, args, warmup: int = 20, iterations: int = 100) -> tuple[float, float]:
     """Benchmark a function, returning (avg_ms, min_ms)."""
     for _ in range(warmup):
         func(*args)

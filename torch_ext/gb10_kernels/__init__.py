@@ -6,18 +6,17 @@ Provides:
     gelu(input) -> Tensor
 """
 
-from typing import Optional
 import torch
 
 # Import the compiled C++ extension
-from gb10_kernels._C import rmsnorm_forward, gelu_forward
+from gb10_kernels._C import gelu_forward, rmsnorm_forward
 
 
 def rmsnorm(
     input: torch.Tensor,
     weight: torch.Tensor,
     eps: float = 1e-6,
-    out: Optional[torch.Tensor] = None,
+    out: torch.Tensor | None = None,
 ) -> torch.Tensor:
     """
     RMSNorm: x * rsqrt(mean(x^2) + eps) * weight
@@ -40,7 +39,7 @@ def rmsnorm(
 
 def gelu(
     input: torch.Tensor,
-    out: Optional[torch.Tensor] = None,
+    out: torch.Tensor | None = None,
 ) -> torch.Tensor:
     """
     GELU approximate: 0.5 * x * (1 + tanh(sqrt(2/pi) * (x + 0.044715 * x^3)))

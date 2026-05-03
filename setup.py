@@ -8,7 +8,8 @@ Usage:
 """
 
 import os
-from setuptools import setup, find_packages
+
+from setuptools import find_packages, setup
 from torch.utils.cpp_extension import BuildExtension, CUDAExtension
 
 # GB10 Blackwell compute capability

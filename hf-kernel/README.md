@@ -148,4 +148,4 @@ The kernel-builder Nix pipeline does not yet support cu130+aarch64, so this was 
 
 ## Source
 
-[github.com/CyberBrown/optimized-CUDA-GB10](https://github.com/CyberBrown/optimized-CUDA-GB10)
+[github.com/Logos-Flux/optimized-CUDA-GB10](https://github.com/Logos-Flux/optimized-CUDA-GB10)

@@ -1,5 +1,3 @@
-from typing import Optional
-
 import torch
 
 from ._ops import ops
@@ -9,7 +7,7 @@ def rmsnorm(
     input: torch.Tensor,
     weight: torch.Tensor,
     eps: float = 1e-6,
-    out: Optional[torch.Tensor] = None,
+    out: torch.Tensor | None = None,
 ) -> torch.Tensor:
     """
     RMSNorm: x * rsqrt(mean(x^2) + eps) * weight

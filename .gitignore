@@ -1,13 +1,40 @@
+# Python
 __pycache__/
 *.pyc
 *.pyo
+*.egg
+*.egg-info/
+
+# Compiled / extension artifacts
 *.so
 *.o
-*.egg-info/
-dist/
 build/
+dist/
+
+# Virtual envs
 .venv/
+.env
+.env.*
+!.env.example
+
+# Tooling caches
+.cache/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Notebooks
+.ipynb_checkpoints/
+
+# Editor / OS
+.idea/
+.vscode/
+.DS_Store
+*.swp
+
+# Model artifacts
 *.pt
 *.pth
 *.onnx
-.cache/

@@ -6,10 +6,9 @@ Usage:
     python benchmarks/benchmark_rmsnorm.py
 """
 
-import torch
 import time
-from typing import Tuple
 
+import torch
 from gb10_kernels import rmsnorm
 
 
@@ -19,7 +18,7 @@ def pytorch_rmsnorm(x: torch.Tensor, weight: torch.Tensor, eps: float = 1e-6) ->
     return x * torch.rsqrt(variance + eps) * weight
 
 
-def benchmark_fn(func, args, warmup: int = 20, iterations: int = 100) -> Tuple[float, float]:
+def benchmark_fn(func, args, warmup: int = 20, iterations: int = 100) -> tuple[float, float]:
     """Benchmark a function, returning (avg_ms, min_ms)."""
     for _ in range(warmup):
         func(*args)
@@ -109,7 +108,7 @@ def main():
     print(f"  Total data moved: {total_bytes / 1e6:.2f} MB")
     print(f"  Achieved bandwidth: {bandwidth_gbps:.1f} GB/s")
     # GB10 theoretical bandwidth — unified memory, not HBM
-    print(f"  (GB10 has unified memory — bandwidth profile differs from HBM GPUs)")
+    print("  (GB10 has unified memory — bandwidth profile differs from HBM GPUs)")
 
 
 if __name__ == "__main__":

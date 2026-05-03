@@ -10,10 +10,11 @@ Usage:
 """
 
 import hashlib
+import importlib.util
 import json
 import os
+import platform
 import shutil
-import sys
 
 import torch
 from torch.utils.cpp_extension import load
@@ -25,7 +26,6 @@ cuda_version = f"cu{torch.version.cuda.replace('.', '')}"
 # Check CXX11 ABI
 cxx11 = "cxx11-" if torch._C._GLIBCXX_USE_CXX11_ABI else ""
 
-import platform
 machine = platform.machine()
 system = platform.system().lower()
 
@@ -59,7 +59,6 @@ ext = load(
 )
 
 # Find the compiled .so
-import importlib
 so_path = importlib.util.find_spec(ext_name).origin
 print(f"Compiled: {so_path}")
 
@@ -103,4 +102,4 @@ for f in sorted(os.listdir(build_dir)):
     else:
         print(f"  {f}/")
 
-print(f"\nDone! Upload with: huggingface-cli upload logos-flux/gb10-rmsnorm ./build")
+print("\nDone! Upload with: huggingface-cli upload logos-flux/gb10-rmsnorm ./build")

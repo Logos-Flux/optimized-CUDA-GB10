@@ -6,15 +6,14 @@ Usage:
     pytest tests/test_kernels.py -v
 """
 
-import torch
 import pytest
-
-from gb10_kernels import rmsnorm, gelu
-
+import torch
+from gb10_kernels import gelu, rmsnorm
 
 # ============================================================================
 # RMSNorm tests
 # ============================================================================
+
 
 def pytorch_rmsnorm(x, weight, eps=1e-6):
     variance = x.pow(2).mean(dim=-1, keepdim=True)
@@ -22,11 +21,14 @@ def pytorch_rmsnorm(x, weight, eps=1e-6):
 
 
 @pytest.mark.parametrize("dtype", [torch.float32, torch.float16, torch.bfloat16])
-@pytest.mark.parametrize("shape", [
-    (2, 1024, 2048),
-    (1, 4096, 3072),
-    (4, 512, 1024),
-])
+@pytest.mark.parametrize(
+    "shape",
+    [
+        (2, 1024, 2048),
+        (1, 4096, 3072),
+        (4, 512, 1024),
+    ],
+)
 def test_rmsnorm_correctness(dtype, shape):
     x = torch.randn(shape, dtype=dtype, device="cuda")
     weight = torch.randn(shape[-1], dtype=dtype, device="cuda")
@@ -63,12 +65,16 @@ def test_rmsnorm_no_weight_ones():
 # GELU tests
 # ============================================================================
 
+
 @pytest.mark.parametrize("dtype", [torch.float32, torch.float16, torch.bfloat16])
-@pytest.mark.parametrize("shape", [
-    (2, 1024, 2048),
-    (1, 4096, 3072),
-    (4, 512, 4096),
-])
+@pytest.mark.parametrize(
+    "shape",
+    [
+        (2, 1024, 2048),
+        (1, 4096, 3072),
+        (4, 512, 4096),
+    ],
+)
 def test_gelu_correctness(dtype, shape):
     x = torch.randn(shape, dtype=dtype, device="cuda")
     pytorch_gelu = torch.nn.GELU(approximate="tanh")

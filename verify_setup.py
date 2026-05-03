@@ -13,6 +13,7 @@ the official PyTorch cu130 pip wheel on DGX Spark:
 
 Exits non-zero on any failure so it doubles as a CI smoke test.
 """
+
 import sys
 import time
 
@@ -71,6 +72,7 @@ def main() -> int:
     try:
         import gb10_kernels  # noqa: F401
         from gb10_kernels import rmsnorm
+
         x = torch.randn(2, 1024, 2048, device="cuda", dtype=torch.bfloat16)
         w = torch.ones(2048, device="cuda", dtype=torch.bfloat16)
         out = rmsnorm(x, w, 1e-6)

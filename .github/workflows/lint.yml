@@ -1,0 +1,66 @@
+name: lint
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: lint-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ruff:
+    name: ruff (check + format)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install ruff
+        run: pip install --upgrade pip ruff
+
+      - name: ruff check
+        run: ruff check .
+
+      - name: ruff format --check
+        run: ruff format --check .
+
+  hygiene:
+    name: hygiene
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Required files present
+        run: |
+          set -euo pipefail
+          for f in LICENSE README.md CHANGELOG.md CONTRIBUTING.md SECURITY.md CODE_OF_CONDUCT.md .editorconfig .gitignore; do
+            if [ ! -f "$f" ]; then
+              echo "::error file=$f::missing required file: $f"
+              exit 1
+            fi
+          done
+          for f in .github/PULL_REQUEST_TEMPLATE.md .github/ISSUE_TEMPLATE/bug_report.md .github/ISSUE_TEMPLATE/feature_request.md; do
+            if [ ! -f "$f" ]; then
+              echo "::error file=$f::missing required template: $f"
+              exit 1
+            fi
+          done
+
+      - name: README sanity
+        run: |
+          set -euo pipefail
+          grep -qE '^# optimized-CUDA-GB10' README.md
+          grep -qE 'Apache' README.md
+          grep -qE 'huggingface\.co/logos-flux/' README.md

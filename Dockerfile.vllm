@@ -1,0 +1,93 @@
+# ============================================================
+# vLLM + GB10 RMSNorm kernel — self-contained build
+# ============================================================
+# Builds vLLM from source against NGC PyTorch (CUDA 13, CC 12.1)
+# and patches its RMSNorm with the GB10 custom kernel.
+#
+# Why source instead of `pip install vllm`?
+# The published vLLM wheels are linked against CUDA 12 PyTorch
+# (libtorch_cuda.so / libc10_cuda.so) and won't load in a CUDA 13
+# environment. We have to build against the NGC PyTorch in this image.
+#
+# Why --no-build-isolation --no-deps?
+# Without --no-build-isolation, pip creates a fresh build env and
+# installs a stock torch wheel into it — losing the NGC PyTorch.
+# Without --no-deps, pip's dep resolver pulls a CPU-only torch wheel
+# into the *runtime* env and silently replaces NGC PyTorch.
+#
+# Build:  DOCKER_BUILDKIT=1 docker build -f Dockerfile.vllm \
+#             -t gb10-vllm:latest .
+# Run:    docker run --rm --gpus all -w /workspace gb10-vllm:latest \
+#             vllm serve <model> --host 0.0.0.0 --port 8000
+# ============================================================
+
+ARG NGC_VERSION=25.12
+FROM nvcr.io/nvidia/pytorch:${NGC_VERSION}-py3
+
+ENV TORCH_CUDA_ARCH_LIST="12.1a"
+ENV CUDA_HOME=/usr/local/cuda
+ENV PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True,garbage_collection_threshold:0.8
+ENV CUDA_CACHE_MAXSIZE=4294967296
+ENV PIP_BREAK_SYSTEM_PACKAGES=1
+# Cap parallelism so vLLM's CUDA compile doesn't OOM on smaller hosts.
+ENV MAX_JOBS=8
+ENV CMAKE_BUILD_PARALLEL_LEVEL=8
+ENV NINJAFLAGS=-j8
+
+# --- Stage 1: build the GB10 kernels ---
+WORKDIR /opt/gb10-kernels
+COPY setup.py pyproject.toml ./
+COPY kernels/ kernels/
+COPY torch_ext/ torch_ext/
+RUN --mount=type=cache,id=pip-cache,target=/root/.cache/pip \
+    pip install --no-build-isolation .
+
+# --- Stage 2: clone and build vLLM from source ---
+# Default pinned to the most recent vLLM tag whose pyproject.toml targets
+# `torch == 2.10.0` (matches NGC 25.12). Override e.g. with
+# --build-arg VLLM_REF=main; if you bump it, double-check the pinned torch
+# version in vLLM's pyproject.toml still aligns with your NGC base.
+ARG VLLM_REF=v0.17.1
+WORKDIR /opt
+RUN git clone --recursive https://github.com/vllm-project/vllm.git && \
+    cd vllm && git checkout ${VLLM_REF} && git submodule update --init --recursive
+
+WORKDIR /opt/vllm
+
+# Pre-install vLLM's PEP 517 build-system requirements. Because we use
+# --no-build-isolation, pip will NOT auto-install these from
+# pyproject.toml's [build-system].requires — without them the install
+# fails with `ModuleNotFoundError: setuptools_scm`. Torch is intentionally
+# omitted so the NGC PyTorch isn't replaced.
+RUN --mount=type=cache,id=pip-cache,target=/root/.cache/pip \
+    pip install --no-build-isolation \
+        "cmake>=3.26.1" ninja "packaging>=24.2" \
+        "setuptools>=77.0.3,<81.0.0" "setuptools-scm>=8.0" wheel jinja2
+
+# Install vLLM's runtime non-torch dependencies. We strip torch/torchvision/
+# torchaudio from common.txt so pip never tries to replace NGC PyTorch.
+RUN --mount=type=cache,id=pip-cache,target=/root/.cache/pip \
+    grep -viE '^(torch|torchvision|torchaudio)([<>=!~ ].*)?$' \
+        requirements/common.txt > /tmp/vllm-deps.txt && \
+    pip install --no-build-isolation -r /tmp/vllm-deps.txt
+
+# Build vLLM itself. --no-deps prevents pip from touching torch at install
+# time, --no-build-isolation prevents it from touching torch at build time.
+RUN --mount=type=cache,id=pip-cache,target=/root/.cache/pip \
+    pip install --no-build-isolation --no-deps -e .
+
+# --- Stage 3: install the RMSNorm patch as a sitecustomize hook ---
+# Loaded by every Python process via PYTHONPATH; safe to no-op if vLLM
+# isn't imported.
+COPY gb10_vllm_patch.py /opt/gb10-patch/sitecustomize.py
+ENV PYTHONPATH="/opt/gb10-patch"
+
+# WORKDIR /workspace, NOT /opt/vllm. If WORKDIR is the vLLM source tree,
+# Python prepends it to sys.path and imports the source `vllm/` package
+# (no compiled _C.abi3.so) instead of the installed package, breaking
+# `from vllm import _C`. If you override -w on `docker run`, point it at
+# any directory outside /opt/vllm.
+WORKDIR /workspace
+COPY verify_setup.py ./
+
+CMD ["python", "verify_setup.py"]

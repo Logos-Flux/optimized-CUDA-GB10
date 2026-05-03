@@ -1,0 +1,68 @@
+# Side-by-side vLLM inference: stock RMSNorm vs the GB10 custom kernel.
+# Both services use the same self-contained Dockerfile.vllm; the stock
+# variant just sets GB10_DISABLE_PATCH=1 to skip the runtime patch.
+#
+# Usage:
+#   DOCKER_BUILDKIT=1 docker compose -f docker-compose.kernel-test.yml up -d --build
+#   docker compose -f docker-compose.kernel-test.yml logs -f
+#   docker compose -f docker-compose.kernel-test.yml down
+
+x-vllm-base: &vllm-base
+  build:
+    context: .
+    dockerfile: Dockerfile.vllm
+  image: gb10-vllm:latest
+  runtime: nvidia
+  working_dir: /workspace  # do NOT use /opt/vllm — see Dockerfile.vllm
+  deploy:
+    resources:
+      reservations:
+        devices:
+          - driver: nvidia
+            count: 1
+            capabilities: [gpu]
+  volumes:
+    - ${HF_CACHE:-~/.cache/huggingface}:/root/.cache/huggingface:ro
+  restart: unless-stopped
+  healthcheck:
+    test: ["CMD", "curl", "-sf", "http://localhost:8000/health"]
+    interval: 15s
+    timeout: 5s
+    retries: 20
+    start_period: 180s
+
+services:
+  vllm-stock:
+    <<: *vllm-base
+    container_name: vllm-stock
+    environment:
+      - CUDA_VISIBLE_DEVICES=0
+      - GB10_DISABLE_PATCH=1
+      - PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
+    ports:
+      - "8001:8000"
+    command: >
+      vllm serve Qwen/Qwen2.5-1.5B-Instruct
+      --gpu-memory-utilization 0.15
+      --max-model-len 4096
+      --enforce-eager
+      --host 0.0.0.0
+      --port 8000
+      --served-model-name Qwen2.5-1.5B-Stock
+
+  vllm-custom:
+    <<: *vllm-base
+    container_name: vllm-custom
+    environment:
+      - CUDA_VISIBLE_DEVICES=0
+      - PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
+    ports:
+      - "8002:8000"
+    command: >
+      vllm serve Qwen/Qwen2.5-1.5B-Instruct
+      --gpu-memory-utilization 0.15
+      --max-model-len 4096
+      --enforce-eager
+      --host 0.0.0.0
+      --port 8000
+      --served-model-name Qwen2.5-1.5B-Custom

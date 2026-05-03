@@ -1,17 +1,23 @@
 services:
   cuda-dev:
     build: .
+    image: gb10-kernels:latest
     container_name: optimized-cuda-gb10
     runtime: nvidia
     environment:
       - NVIDIA_VISIBLE_DEVICES=all
       - TORCH_CUDA_ARCH_LIST=12.1a
     volumes:
+      # Bind-mount source so iteration on tests/benchmarks doesn't require
+      # a rebuild. The installed kernel package lives in site-packages and
+      # is unaffected; rebuild the image (or `pip install .` inside the
+      # container) after changing kernel sources.
       - .:/workspace
       - cuda-cache:/root/.cache
     network_mode: host
     stdin_open: true
     tty: true
+    command: tail -f /dev/null
     deploy:
       resources:
         reservations:
